@@ -44,22 +44,3 @@
         (when-not (empty? ts)
           (let [remaining (drop-while #(< (token-depth t) (token-depth %)) ts)]
             (recur (first remaining) (rest remaining))))))))
-          ; (let [siblings (take-while #(sibling-token? t %) ts)
-          ;       others (drop-while #(or (sibling-token? t %)
-          ;                               (< (token-depth t)
-          ;                                  (token-depth %)))
-          ;                          ts)
-          ;       sibling-defs (filter global-def-token? siblings)]
-          ;   (if-not (empty? sibling-defs)
-          ;     (first sibling-defs)
-          ;     (recur (first others) (rest others)))))))))
-
-; (defn find-top-level-symbol [tokens]
-;   (loop [token (first tokens) tree (rest tokens)]
-;     (if (globally-defined-entity? token)
-;       (get token "value")
-;       (if-not (empty? tree)
-;         (let [tree' (drop-while #(sibling? % token) tree)
-;               parent (first tree')]
-;           (if (parent-token? parent token)
-;             (recur parent (rest tree'))))))))
