@@ -1,0 +1,18 @@
+{
+  "name": "atom-clj-refactor",
+  "main": "./lib/atom-clj-refactor",
+  "version": "0.0.0",
+  "description": "A short description of your package",
+  "keywords": [
+  ],
+  "activationCommands": {
+    "atom-workspace": "atom-clj-refactor:toggle"
+  },
+  "repository": "https://github.com/atom/atom-clj-refactor",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "dependencies": {
+  }
+}
