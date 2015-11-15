@@ -1,5 +1,21 @@
-# atom-clj-refactor package
+# atom-clj-refactor package for Atom
 
-A short description of your package.
+The goal of this package is to provide the same Clojure refactoring
+functionality in Atom that [clj-refactor] adds to Emacs.
 
-![A screenshot of your package](https://f.cloud.github.com/assets/69169/2290250/c35d867a-a017-11e3-86be-cd7c5bf3ff9b.gif)
+## State of development
+
+**The package is work in progress and largely unfinished.**
+
+So far the following refactoring commands are implemented:
+
+* `Add declaration` - adds a `declare` for the current top-level form either
+  below any current `declare` statements or below the `ns` block.
+
+[clj-refactor]: (https://github.com/clojure-emacs/clj-refactor.el/wiki)
+
+## Copyright
+
+&copy; 2015 Jannis Pohlmann
+
+Licensed under the MIT License.

@@ -1,59 +1,40 @@
 (ns atom-clj-refactor.core
   (:require [clojure.walk :refer [keywordize-keys]]
-            [atom-clj-refactor.tokens :as t]))
+            [atom-clj-refactor.editor :as e]))
 
 (enable-console-print!)
 
-;;;; Atom interop
+;;;; Atom commands
 
-(defn point->vec [p]
-  (vector (.-row p) (.-column p)))
-
-(defn ->range [v]
-  (clj->js v))
-
-(defn active-editor []
-  (js/atom.workspace.getActiveTextEditor))
-
-(defn cursor-positions [editor]
-  (into []
-        (map point->vec)
-        (array-seq (.getCursorBufferPositions editor))))
-
-;;;; Clojure parsing
-
-(defn top-level-symbol [editor position]
-  (let [grammar (.getGrammar editor)
-        range (->range (vector [0 0] position))
-        tokens (->> (.getTextInBufferRange editor range)
-                    (.tokenizeLines grammar)
-                    js->clj
-                    flatten
-                    (map keywordize-keys))]
-    (t/find-global-def tokens)))
-
-(defn print-top-level-map [m]
-  (doseq [[pos global-def] m]
-    (println "pos" pos)
-    (println "  global-def" global-def)))
-
-;;;; Commands
-
-(defn add-declarations! [editor decls]
-  (doseq [[pos token] decls]
-    (println pos token)
+(defn add-declarations! [editor symbols]
+  (doseq [[cursor token] symbols]
+    (println cursor token)
     (when token
-      (let [declaration (str "(declare " (:value token) ")")]
-        (.. editor (insertText declaration))))))
+      (let [text (str "(declare " (:value token) ")")
+            tokens (e/tokenize-text editor)
+            decls (e/find-blocks tokens
+                                 #(e/has-value? % "declare")
+                                 "meta.expression.clojure")
+            ns' (first (e/find-blocks tokens
+                                      #(e/has-value? % "ns")
+                                      "meta.expression.clojure"))]
+        (if-not (empty? decls)
+          (e/insert-after-block editor (last decls) (str "\n" text))
+          (e/insert-after-block editor ns' (str "\n\n" text)))))))
 
 (defn add-declaration! []
   (println "atom-clj-refactor:add-declaration")
-  (let [editor (active-editor)
-        positions (cursor-positions editor)]
-    (->> positions
-         (map #(top-level-symbol editor %))
-         (map js->clj)
-         (zipmap positions)
+  (let [editor (e/active-editor)
+        cursors (e/cursors editor)
+        tokens (e/tokenize-text editor)]
+    (->> cursors
+         (map (fn [cursor]
+                (e/tokens-in-scope tokens cursor
+                                   "meta.definition.global.clojure")))
+         (map (fn [tokens]
+                (e/find-token tokens
+                              #(e/has-scope? % "entity.global.clojure"))))
+         (zipmap cursors)
          (add-declarations! editor))))
 
 ;;;; Package lifecycle
