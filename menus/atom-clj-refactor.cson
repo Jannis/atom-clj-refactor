@@ -8,6 +8,10 @@
         {
           "label": "Add declaration (declar) for the current top-level form",
           "command": "atom-clj-refactor:add-declaration"
+        },
+        {
+          "label": "Cycle privacy of defn or def",
+          "command": "atom-clj-refactor:cycle-privacy"
         }
       ]
     ]

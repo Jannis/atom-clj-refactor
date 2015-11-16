@@ -67,6 +67,7 @@
 (defn tokens-in-scope
   "Returns all tokens in the given scope, relative to a given position."
   [tokens pos scope]
+  {:pre [(vector? pos) (= 2 (count pos)) (string? scope)]}
   (letfn [(before-pos? [t]
             (let [t-pos (:position (meta t))]
               (or (< (first t-pos) (first pos))
@@ -78,6 +79,10 @@
 
 ;;;; Token lookup
 
+(defn value
+  [token]
+  (:value token))
+
 (defn has-scope?
   "Tests whether the deepest scope of the token matches the given scope."
   [token scope]
@@ -87,6 +92,11 @@
   "Tests whether the token has the given text value."
   [token value]
   (= value (:value token)))
+
+(defn value-in?
+  [token coll]
+  {:pre [(or (nil? token) (and (map? token) (contains? token :value)))]}
+  (some #{(:value token)} coll))
 
 (defn find-tokens
   "Finds all tokens that match the given predicate."
@@ -124,3 +134,10 @@
   (let [pos (:position (meta (last tokens)))]
     (println "insert at" pos text)
     (.. editor getBuffer (insert (clj->js pos) text))))
+
+(defn replace-token
+  [editor token text]
+  (let [start (:position (meta token))
+        end (update start 1 + (count (value token)))]
+    (println "replace at" [start end] text)
+    (.. editor getBuffer (setTextInRange (clj->js [start end]) text))))
