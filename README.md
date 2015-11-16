@@ -13,6 +13,8 @@ So far the following refactoring commands are implemented:
 
 * `Add declaration` - adds a `declare` for the current top-level form either
   below any current `declare` statements or below the `ns` block.
+* `Cycle privacy` - toggles privacy of the current top-level `def` (via
+  `^:private` or `^{:private true}`) or `defn` (via `defn-`).
 
 ## Copyright
 

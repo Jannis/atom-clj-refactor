@@ -1,6 +1,7 @@
 (ns atom-clj-refactor.core
   (:require [clojure.walk :refer [keywordize-keys]]
-            [atom-clj-refactor.editor :as e]))
+            [atom-clj-refactor.editor :as e]
+            [atom-clj-refactor.lang :as lang]))
 
 (enable-console-print!)
 
@@ -8,9 +9,8 @@
 
 (defn add-declarations! [editor symbols]
   (doseq [[cursor token] symbols]
-    (println cursor token)
     (when token
-      (let [text (str "(declare " (:value token) ")")
+      (let [text (str "(declare " (e/value token) ")")
             tokens (e/tokenize-text editor)
             decls (e/find-blocks tokens
                                  #(e/has-value? % "declare")
@@ -28,22 +28,38 @@
         cursors (e/cursors editor)
         tokens (e/tokenize-text editor)]
     (->> cursors
-      (map (fn [cursor]
-             (e/tokens-in-scope tokens cursor
-                                "meta.definition.global.clojure")))
+      (map #(e/get-scope tokens % "meta.definition.global.clojure"))
       (map (fn [tokens]
-             (e/find-token tokens
-                           #(e/has-scope? % "entity.global.clojure"))))
+             (e/find-first tokens #(e/has-scope? % "entity.global.clojure"))))
       (zipmap cursors)
       (add-declarations! editor))))
 
+(defn cycle-def-privacy! [editor tokens]
+  (let [simple-meta (e/find-scope tokens "meta.metadata.simple.clojure")
+        map-meta (e/find-scope tokens "meta.metadata.map.clojure")
+        all-meta (merge (lang/read-meta map-meta)
+                        (lang/read-meta simple-meta))
+        new-meta (if (:private all-meta)
+                   (dissoc all-meta :private)
+                   (assoc all-meta :private true))
+        new-meta-text (lang/write-meta new-meta)]
+    (cond
+      (not (empty? simple-meta))
+        (e/replace-tokens editor simple-meta new-meta-text)
+      (not (empty? map-meta))
+        (e/replace-tokens editor map-meta new-meta-text)
+      :else
+        (when-not (empty? new-meta)
+          (e/insert-after-token editor (first tokens)
+                                (str " " new-meta-text))))))
+
 (defn cycle-privacies! [editor symbols]
-  (doseq [[cursor token] symbols]
-    (println cursor token)
-    (let [text ({"defn" "defn-" "defn-" "defn"} (e/value token))]
-      (println "value" (e/value token) "text" text)
-      (when text
-        (e/replace-token editor token text)))))
+  (doseq [[cursor tokens] symbols]
+    (when-not (empty? tokens)
+      (case (e/value (first tokens))
+        "def" (cycle-def-privacy! editor tokens)
+        "defn" (e/replace-token editor (first tokens) "defn-")
+        "defn-" (e/replace-token editor (first tokens) "defn")))))
 
 (defn cycle-privacy! []
   (println "atom-clj-refactor:cycle-privacy")
@@ -51,13 +67,11 @@
         cursors (e/cursors editor)
         tokens (e/tokenize-text editor)]
     (->> cursors
-      (map (fn [cursor]
-             (e/tokens-in-scope tokens cursor
-                                "meta.definition.global.clojure")))
+      (map #(e/get-scope tokens % "meta.definition.global.clojure"))
       (map (fn [tokens]
-             (e/find-token tokens
-                           #(and (e/has-scope? % "keyword.control.clojure")
-                                 (e/value-in? % ["defn" "defn-"])))))
+             (e/find-token #(and (e/value-in? % ["def" "defn" "defn-"])
+                                 (e/has-scope? % "keyword.control.clojure"))
+                           tokens)))
       (zipmap cursors)
       (cycle-privacies! editor))))
 
@@ -69,12 +83,9 @@
     (js-obj "atom-clj-refactor:add-declaration" add-declaration!
             "atom-clj-refactor:cycle-privacy" cycle-privacy!)))
 
-(defn deactivate []
-  (println "atom-clj-refactor deactivated"))
-
 (set! js/module.exports
   (js-obj "activate" activate
-          "deactivate" deactivate
+          "deactivate" (constantly nil)
           "serialize" (constantly nil)))
 
 (set! *main-cli-fn* (constantly nil))
