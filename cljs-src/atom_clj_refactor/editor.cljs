@@ -15,12 +15,24 @@
 
 ;;;; Cursors
 
-(defn cursors [editor]
+(defn compare-cursors [a b]
+  (cond
+    (= a b) 0
+    (or (< (a 0) (b 0))
+        (and (= (a 0) (b 0))
+             (<= (a 1) (b 1)))) -1
+    :else 1))
+
+(defn cursors
   "Returns the buffer positions of all active cursors in an editor."
-  (into []
-        (comp (map point->vec)
-              (map #(update % 1 dec)))
-        (array-seq (.getCursorBufferPositions editor))))
+  [editor]
+  (->> editor
+    (.getCursorBufferPositions)
+    array-seq
+    (map point->vec)
+    (map #(update % 1 dec))
+    (sort compare-cursors)
+    reverse))
 
 ;;;; Tokenizing
 
